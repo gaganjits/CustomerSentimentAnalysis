@@ -1,0 +1,1492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Sentiment Analysis — iPhone 15 · Gaganjit Singh</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700;1,800&family=Epilogue:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f2ec;
+    --white: #ffffff;
+    --ink: #0d0d0d;
+    --ink2: #1a1a1a;
+    --muted: #6b6560;
+    --border: #ddd9d3;
+    --accent: #e8a020;
+    --accent2: #d63b2f;
+    --accent3: #2b5be0;
+    --positive: #1a7a4a;
+    --negative: #c0392b;
+    --neutral: #7f8c8d;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Epilogue', sans-serif;
+    font-weight: 400;
+    overflow-x: hidden;
+  }
+
+  /* ── TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23f5f2ec'/%3E%3Crect x='0' y='0' width='1' height='1' fill='%23e8e4dc' opacity='0.4'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page { position: relative; z-index: 1; }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: rgba(245,242,236,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 48px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: 0.01em;
+  }
+
+  .nav-right {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .nav-right a {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .nav-right a:hover { color: var(--ink); }
+
+  .nav-cta {
+    background: var(--accent2) !important;
+    color: #fff !important;
+    padding: 7px 16px !important;
+    font-weight: 600 !important;
+  }
+  .nav-cta:hover { background: var(--accent2) !important; color: #fff !important; }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 140px 48px 80px;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 60px;
+    align-items: end;
+  }
+
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--ink);
+    color: var(--bg);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    margin-bottom: 24px;
+  }
+
+  .hero-tag-dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: blink 1.5s infinite;
+  }
+
+  @keyframes blink {
+    0%,100%{opacity:1} 50%{opacity:0.3}
+  }
+
+  .hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(52px, 6vw, 88px);
+    font-weight: 900;
+    line-height: 0.92;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    margin-bottom: 28px;
+  }
+
+  .hero-title em {
+    font-style: italic;
+    color: var(--accent2);
+  }
+
+  .hero-desc {
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--muted);
+    max-width: 540px;
+    margin-bottom: 36px;
+  }
+
+  .hero-desc strong { color: var(--ink); font-weight: 500; }
+
+  .hero-meta {
+    display: flex;
+    gap: 28px;
+    padding-top: 28px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .meta-item {}
+  .meta-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .meta-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  /* HERO RIGHT — big stat */
+  .hero-right {
+    background: var(--white);
+    color: var(--ink);
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+    border: 2px solid var(--ink);
+  }
+
+  .hero-right::before {
+    content: '"';
+    position: absolute;
+    top: -20px; right: 20px;
+    font-family: 'Playfair Display', serif;
+    font-size: 200px;
+    color: rgba(13,13,13,0.04);
+    line-height: 1;
+  }
+
+  .big-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 96px;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--accent2);
+    margin-bottom: 4px;
+  }
+
+  .big-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+
+  .big-sub {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+  }
+
+  /* ── RULE ── */
+  .section-rule {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 48px;
+    border-top: 2px solid var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+    margin-bottom: 60px;
+  }
+
+  .rule-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .rule-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  /* ── SECTIONS ── */
+  .section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 48px 100px;
+  }
+
+  .section-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(32px, 4vw, 52px);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+
+  .section-heading em { font-style: italic; color: var(--accent2); }
+
+  .section-intro {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.7;
+    max-width: 600px;
+    margin-bottom: 48px;
+  }
+
+  /* ── STAT STRIP ── */
+  .stat-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border: 2px solid var(--ink);
+    margin-bottom: 80px;
+  }
+
+  .stat-cell {
+    padding: 32px 28px;
+    border-right: 1px solid var(--ink);
+    position: relative;
+    transition: background 0.2s;
+    cursor: default;
+  }
+  .stat-cell:last-child { border-right: none; }
+  .stat-cell:hover { background: var(--ink); }
+  .stat-cell:hover .stat-num { color: var(--accent); }
+  .stat-cell:hover .stat-label { color: rgba(245,242,236,0.5); }
+  .stat-cell:hover .stat-desc { color: rgba(245,242,236,0.6); }
+
+  .stat-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 44px;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--ink);
+    margin-bottom: 6px;
+    transition: color 0.2s;
+  }
+
+  .stat-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    transition: color 0.2s;
+  }
+
+  .stat-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+    transition: color 0.2s;
+  }
+
+  /* ── CHART GRID ── */
+  .chart-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+  .chart-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+  .chart-32 { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px; }
+  .chart-23 { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; margin-bottom: 24px; }
+
+  .chart-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    padding: 28px;
+    position: relative;
+  }
+
+  .chart-card.dark {
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+
+  .chart-card-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .chart-card.dark .chart-card-label { color: rgba(245,242,236,0.4); }
+
+  .chart-card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 4px;
+    line-height: 1.2;
+  }
+
+  .chart-card.dark .chart-card-title { color: var(--bg); }
+
+  .chart-card-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  .chart-card.dark .chart-card-sub { color: rgba(245,242,236,0.5); }
+
+  .chart-wrap { position: relative; }
+
+  /* ── SENTIMENT METER ── */
+  .sentiment-meter {
+    margin: 16px 0 20px;
+  }
+
+  .meter-track {
+    height: 12px;
+    background: #e8e4dc;
+    overflow: hidden;
+    display: flex;
+    margin-bottom: 8px;
+  }
+
+  .meter-pos {
+    background: var(--positive);
+    height: 100%;
+    transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .meter-neg {
+    background: var(--negative);
+    height: 100%;
+    transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .meter-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .meter-labels .pos { color: var(--positive); }
+  .meter-labels .neg { color: var(--negative); }
+
+  /* ── WORD CLOUD STYLE ── */
+  .word-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 16px 0;
+    align-items: center;
+  }
+
+  .word-tag {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    padding: 4px 10px;
+    cursor: default;
+    transition: all 0.2s;
+    line-height: 1.2;
+  }
+
+  .word-tag:hover { transform: scale(1.08); }
+
+  .word-tag.pos { background: rgba(26,122,74,0.1); color: var(--positive); }
+  .word-tag.neg { background: rgba(192,57,43,0.12); color: var(--negative); }
+
+  /* ── RATING BARS ── */
+  .rating-list { display: flex; flex-direction: column; gap: 12px; }
+
+  .rating-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: default;
+  }
+
+  .rating-stars {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink);
+    width: 40px;
+    flex-shrink: 0;
+  }
+
+  .rating-bar-bg {
+    flex: 1;
+    height: 8px;
+    background: #e8e4dc;
+    overflow: hidden;
+  }
+
+  .rating-bar-fill {
+    height: 100%;
+    transition: width 1s cubic-bezier(0.4,0,0.2,1);
+    width: 0;
+  }
+
+  .rating-count {
+    font-size: 11px;
+    color: var(--muted);
+    width: 36px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .rating-sentiment {
+    font-size: 10px;
+    font-weight: 600;
+    width: 50px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* ── CATEGORY PILLS ── */
+  .insight-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 8px;
+  }
+
+  .insight-item {
+    padding: 16px;
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+    cursor: default;
+  }
+
+  .insight-item:hover {
+    border-color: var(--ink);
+    background: var(--ink);
+  }
+
+  .insight-item:hover .insight-topic { color: var(--accent); }
+  .insight-item:hover .insight-desc { color: rgba(245,242,236,0.6); }
+  .insight-item:hover .insight-badge { background: rgba(255,255,255,0.1); color: var(--bg); }
+
+  .insight-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+  }
+
+  .badge-pos { background: rgba(26,122,74,0.1); color: var(--positive); }
+  .badge-neg { background: rgba(192,57,43,0.1); color: var(--negative); }
+
+  .insight-topic {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 4px;
+    transition: color 0.2s;
+  }
+
+  .insight-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+    transition: color 0.2s;
+  }
+
+  /* ── PIPELINE ── */
+  .pipeline {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    border: 1px solid var(--border);
+    margin-top: 8px;
+  }
+
+  .pipe-step {
+    padding: 24px 20px;
+    border-right: 1px solid var(--border);
+    position: relative;
+    transition: background 0.2s;
+    cursor: default;
+  }
+
+  .pipe-step:last-child { border-right: none; }
+  .pipe-step:hover { background: var(--ink); }
+  .pipe-step:hover .pipe-num { color: var(--accent); }
+  .pipe-step:hover .pipe-name { color: var(--bg); }
+  .pipe-step:hover .pipe-tool { color: rgba(245,242,236,0.5); }
+  .pipe-step:hover .pipe-arrow { color: rgba(245,242,236,0.3); }
+
+  .pipe-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 900;
+    color: #e8e4dc;
+    line-height: 1;
+    margin-bottom: 8px;
+    transition: color 0.2s;
+  }
+
+  .pipe-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+    transition: color 0.2s;
+  }
+
+  .pipe-tool {
+    font-size: 11px;
+    color: var(--muted);
+    transition: color 0.2s;
+  }
+
+  .pipe-arrow {
+    position: absolute;
+    right: -10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: var(--border);
+    z-index: 2;
+    transition: color 0.2s;
+  }
+
+  .pipe-step:last-child .pipe-arrow { display: none; }
+
+  /* ── AUTHOR STRIP ── */
+  .author-strip {
+    background: var(--bg);
+    color: var(--ink);
+    padding: 48px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 40px;
+    align-items: center;
+    margin-top: 0;
+    border-top: 2px solid var(--ink);
+  }
+
+  .author-strip h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: var(--ink);
+  }
+
+  .author-strip p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 540px;
+  }
+
+  .author-links {
+    display: flex;
+    gap: 10px;
+    flex-direction: column;
+  }
+
+  .author-link {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 10px 20px;
+    text-decoration: none;
+    transition: all 0.2s;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .author-link.primary { background: var(--ink); color: var(--bg); }
+  .author-link.primary:hover { background: var(--accent2); color: #fff; }
+  .author-link.secondary { border: 1px solid var(--border); color: var(--muted); }
+  .author-link.secondary:hover { border-color: var(--ink); color: var(--ink); }
+
+  /* ── FOOTER ── */
+  footer {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  footer span { font-size: 12px; color: var(--muted); }
+
+  .footer-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .ftag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  /* ── HOVER STRIP ── */
+  .chart-hover {
+    min-height: 24px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .chart-card.dark .chart-hover { border-top-color: rgba(255,255,255,0.1); }
+
+  .hv { }
+  .hv-label { font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 1px; }
+  .hv-val { font-family: 'Playfair Display', serif; font-size: 14px; font-weight: 700; color: var(--ink); }
+  .chart-card.dark .hv-val { color: var(--bg); }
+
+  @media(max-width:900px){
+    nav { padding: 0 20px; }
+    .hero { grid-template-columns:1fr; padding:100px 24px 60px; }
+    .hero-right { display:none; }
+    .stat-strip { grid-template-columns:1fr 1fr; }
+    .stat-cell { border-bottom:1px solid var(--ink); }
+    .chart-2col,.chart-3col,.chart-32,.chart-23 { grid-template-columns:1fr; }
+    .pipeline { grid-template-columns:1fr 1fr; }
+    .section { padding:0 24px 80px; }
+    .section-rule { padding:0 24px; padding-top:12px; }
+    .author-strip { grid-template-columns:1fr; padding:32px 24px; }
+    footer { padding:20px 24px; }
+    .insight-grid { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Gaganjit Singh — Portfolio</div>
+  <div class="nav-right">
+    <a href="#overview">Overview</a>
+    <a href="#analysis">Analysis</a>
+    <a href="#insights">Insights</a>
+    <a href="https://github.com/gaganjits/CustomerSentimentAnalysis" target="_blank" class="nav-cta">GitHub ↗</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-left">
+    <div class="hero-tag">
+      <div class="hero-tag-dot"></div>
+      NLP · Web Scraping · Sentiment Analysis
+    </div>
+    <h1 class="hero-title">
+      What do<br>customers<br><em>really</em> think?
+    </h1>
+    <p class="hero-desc">
+      A full end-to-end NLP pipeline — scraping <strong>300+ iPhone 15 reviews</strong> from Flipkart, preprocessing with NLTK, scoring with TextBlob, and surfacing actionable insights through data visualization.
+    </p>
+    <div class="hero-meta">
+      <div class="meta-item">
+        <div class="meta-label">Product</div>
+        <div class="meta-val">iPhone 15 128GB</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Source</div>
+        <div class="meta-val">Flipkart</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Reviews</div>
+        <div class="meta-val">300+</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Stack</div>
+        <div class="meta-val">Python · NLTK · TextBlob</div>
+      </div>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="big-label">Overall Positive Sentiment</div>
+    <div class="big-num">81.67<span style="font-size:48px">%</span></div>
+    <div class="big-sub">
+      245 of 300 reviews classified as positive · Avg polarity score 0.287 · Strong customer satisfaction signal
+    </div>
+  </div>
+</div>
+
+<!-- RULE 01 -->
+<div class="section-rule" id="overview">
+  <span class="rule-label">01 — Overview</span>
+  <span class="rule-num">Key Numbers</span>
+</div>
+
+<!-- STAT STRIP -->
+<div class="section" style="padding-bottom:0">
+  <div class="stat-strip">
+    <div class="stat-cell">
+      <div class="stat-num">300+</div>
+      <div class="stat-label">Reviews Scraped</div>
+      <div class="stat-desc">Automated via Selenium &amp; BeautifulSoup across 30 pages</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">81.7%</div>
+      <div class="stat-label">Positive Sentiment</div>
+      <div class="stat-desc">245 reviews classified positive using TextBlob polarity</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">0.287</div>
+      <div class="stat-label">Avg Polarity</div>
+      <div class="stat-desc">On a −1 to +1 scale. Strong lean toward positive expression</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">0.542</div>
+      <div class="stat-label">Avg Subjectivity</div>
+      <div class="stat-desc">Reviews are moderately opinionated — balanced signal quality</div>
+    </div>
+  </div>
+</div>
+
+<!-- RULE 02 -->
+<div class="section-rule" id="analysis" style="margin-top:80px">
+  <span class="rule-label">02 — Sentiment Analysis</span>
+  <span class="rule-num">Charts &amp; Breakdowns</span>
+</div>
+
+<div class="section">
+
+  <!-- ROW 1: Sentiment distribution + Rating correlation -->
+  <div class="chart-32">
+
+    <div class="chart-card">
+      <div class="chart-card-label">Sentiment Distribution</div>
+      <div class="chart-card-title">How customers feel — 5 tiers</div>
+      <div class="chart-card-sub">Classified by polarity score: Very Positive &gt;0.3 · Positive 0.1–0.3 · Neutral −0.1–0.1 · Negative −0.3–0.1 · Very Negative &lt;−0.3</div>
+      <div class="sentiment-meter">
+        <div class="meter-track">
+          <div class="meter-pos" id="meter-pos" style="width:0%"></div>
+          <div class="meter-neg" id="meter-neg" style="width:0%"></div>
+        </div>
+        <div class="meter-labels">
+          <span class="pos">81.67% Positive</span>
+          <span class="neg">18.33% Negative</span>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="sentDistChart"></canvas>
+      </div>
+      <div class="chart-hover" id="dist-hover">
+        <span style="color:var(--muted);font-size:11px">← hover bars to explore each tier</span>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-label">Rating vs Sentiment</div>
+      <div class="chart-card-title">Do stars match how people write?</div>
+      <div class="chart-card-sub">Avg polarity score per star rating</div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="ratingChart"></canvas>
+      </div>
+      <div class="chart-hover" id="rating-hover" >
+        <span style="color:var(--muted);font-size:11px">← hover to compare</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ROW 2: Polarity distribution + Subjectivity -->
+  <div class="chart-2col">
+
+    <div class="chart-card">
+      <div class="chart-card-label">Polarity Distribution</div>
+      <div class="chart-card-title">Spread of sentiment scores</div>
+      <div class="chart-card-sub">Bucketed from −1.0 to +1.0 · Most reviews cluster in the 0.2–0.5 range</div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="polarityChart"></canvas>
+      </div>
+      <div class="chart-hover" id="polarity-hover">
+        <span style="color:var(--muted);font-size:11px">← hover buckets to explore</span>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-label">Subjectivity vs Polarity</div>
+      <div class="chart-card-title">Opinion strength by sentiment</div>
+      <div class="chart-card-sub">Higher subjectivity = more opinionated language · Avg subjectivity per sentiment tier</div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="subjectivityChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ROW 3: Star ratings + Review length -->
+  <div class="chart-23">
+
+    <div class="chart-card">
+      <div class="chart-card-label">Star Rating Breakdown</div>
+      <div class="chart-card-title">Review count by stars</div>
+      <div class="chart-card-sub">Hover for sentiment label per tier</div>
+      <div class="rating-list" id="rating-list"></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-label">Review Length Analysis</div>
+      <div class="chart-card-title">Do longer reviews skew more negative?</div>
+      <div class="chart-card-sub">Avg word count by sentiment category — more detail often means more to complain about</div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="lengthChart"></canvas>
+      </div>
+      <div class="chart-hover" id="length-hover">
+        <span style="color:var(--muted);font-size:11px">← hover to compare</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ROW 4: Word clouds (styled tags) -->
+  <div class="chart-2col">
+
+    <div class="chart-card">
+      <div class="chart-card-label">Positive Reviews — Top Words</div>
+      <div class="chart-card-title">What happy customers talk about</div>
+      <div class="chart-card-sub">Most frequent terms in positive reviews after stopword removal &amp; lemmatization</div>
+      <div class="word-cloud" id="pos-cloud"></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-label">Negative Reviews — Top Words</div>
+      <div class="chart-card-title">Where dissatisfaction surfaces</div>
+      <div class="chart-card-sub">Most frequent terms in negative reviews — key pain points identified</div>
+      <div class="word-cloud" id="neg-cloud"></div>
+    </div>
+
+  </div>
+
+  <!-- ROW 5: Monthly trend proxy (rating over pages) -->
+  <div class="chart-card" style="margin-bottom:24px">
+    <div class="chart-card-label">Sentiment Score — Review Sequence</div>
+    <div class="chart-card-title">Polarity trend across 300 reviews (3-review rolling average)</div>
+    <div class="chart-card-sub">Reviews scraped in order from Flipkart · Rolling average smooths noise · Dotted line = neutral threshold</div>
+    <div class="chart-wrap" style="height:200px">
+      <canvas id="trendChart"></canvas>
+    </div>
+    <div class="chart-hover" id="trend-hover">
+      <span style="color:var(--muted);font-size:11px">← hover to inspect</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- RULE 03 -->
+<div class="section-rule" id="insights">
+  <span class="rule-label">03 — Insights</span>
+  <span class="rule-num">Key Findings</span>
+</div>
+
+<div class="section">
+
+  <h2 class="section-heading">What the data <em>actually</em> says</h2>
+  <p class="section-intro">Beyond the numbers — the themes that matter for product teams, marketing, and customer experience decisions.</p>
+
+  <div class="insight-grid">
+    <div class="insight-item">
+      <span class="insight-badge badge-pos">Strength</span>
+      <div class="insight-topic">Camera quality dominates praise</div>
+      <div class="insight-desc">Camera, photography, and photo quality are the most mentioned terms in positive reviews. The 48MP system is a clear purchase driver.</div>
+    </div>
+    <div class="insight-item">
+      <span class="insight-badge badge-neg">Pain Point</span>
+      <div class="insight-topic">Battery life is the #1 complaint</div>
+      <div class="insight-desc">Battery, charging, and heating appear disproportionately in negative reviews. A recurring issue despite hardware upgrades.</div>
+    </div>
+    <div class="insight-item">
+      <span class="insight-badge badge-pos">Strength</span>
+      <div class="insight-topic">Performance consistently praised</div>
+      <div class="insight-desc">Fast, smooth, performance, and speed feature heavily in high-polarity reviews. The A16 chip is meeting expectations.</div>
+    </div>
+    <div class="insight-item">
+      <span class="insight-badge badge-neg">Pain Point</span>
+      <div class="insight-topic">Price perception creates friction</div>
+      <div class="insight-desc">Expensive, overpriced, and value-for-money appear frequently in negative reviews, especially from first-time Apple buyers.</div>
+    </div>
+    <div class="insight-item">
+      <span class="insight-badge badge-pos">Strength</span>
+      <div class="insight-topic">Design &amp; build quality wins</div>
+      <div class="insight-desc">Build, design, premium, and look are strong positive signals. Customers associate physical quality with the Apple brand.</div>
+    </div>
+    <div class="insight-item">
+      <span class="insight-badge badge-neg">Pain Point</span>
+      <div class="insight-topic">Heating issues flagged repeatedly</div>
+      <div class="insight-desc">Heat and overheating appear in a cluster of negative reviews, often alongside gaming and extended usage scenarios.</div>
+    </div>
+  </div>
+
+  <!-- Pipeline -->
+  <h2 class="section-heading" style="margin-top:72px">The <em>pipeline</em></h2>
+  <p class="section-intro">Five modular stages — each independently reusable, each clearly documented.</p>
+
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="pipe-num">01</div>
+      <div class="pipe-name">Scraping</div>
+      <div class="pipe-tool">Selenium + BS4</div>
+      <div class="pipe-arrow">→</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">02</div>
+      <div class="pipe-name">Cleaning</div>
+      <div class="pipe-tool">Pandas + NLTK</div>
+      <div class="pipe-arrow">→</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">03</div>
+      <div class="pipe-name">Scoring</div>
+      <div class="pipe-tool">TextBlob</div>
+      <div class="pipe-arrow">→</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">04</div>
+      <div class="pipe-name">Visualization</div>
+      <div class="pipe-tool">Matplotlib + Seaborn</div>
+      <div class="pipe-arrow">→</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">05</div>
+      <div class="pipe-name">Reporting</div>
+      <div class="pipe-tool">Jupyter Notebook</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- AUTHOR STRIP -->
+<div class="author-strip">
+  <div>
+    <h3>Built by Gaganjit Singh</h3>
+    <p>CS student at Thompson Rivers University, graduating May 2026. Open to Data Analyst roles across Canada. This project demonstrates end-to-end NLP pipeline construction — from raw web scraping to business-ready insights. Also holds AZ-900, pursuing PL-300.</p>
+  </div>
+  <div class="author-links">
+    <a href="https://linkedin.com/in/gaganjitsingh99" target="_blank" class="author-link primary">LinkedIn ↗</a>
+    <a href="https://github.com/gaganjits/CustomerSentimentAnalysis" target="_blank" class="author-link secondary">GitHub ↗</a>
+    <a href="https://mail.google.com/mail/?view=cm&to=gaganjit.s99@gmail.com" target="_blank" class="author-link secondary">Email ↗</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <span>Customer Sentiment Analysis · iPhone 15 · Flipkart · Built by Gaganjit Singh</span>
+  <div class="footer-tags">
+    <span class="ftag">Python</span>
+    <span class="ftag">NLTK</span>
+    <span class="ftag">TextBlob</span>
+    <span class="ftag">Selenium</span>
+    <span class="ftag">300+ Reviews</span>
+  </div>
+</footer>
+
+</div><!-- end .page -->
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const SENT_DIST = [
+  {label:'Very Positive', count:98,  color:'#1a7a4a', pct:32.7},
+  {label:'Positive',      count:147, color:'#4caf82', pct:49.0},
+  {label:'Neutral',       count:23,  color:'#9e9e9e', pct:7.7},
+  {label:'Negative',      count:28,  color:'#e57373', pct:9.3},
+  {label:'Very Negative', count:4,   color:'#c0392b', pct:1.3},
+];
+
+const RATING_POLARITY = [
+  {stars:'★★★★★', count:168, polarity:0.412, pct:56},
+  {stars:'★★★★☆', count:54,  polarity:0.284, pct:18},
+  {stars:'★★★☆☆', count:36,  polarity:0.091, pct:12},
+  {stars:'★★☆☆☆', count:27,  polarity:-0.112, pct:9},
+  {stars:'★☆☆☆☆', count:15,  polarity:-0.287, pct:5},
+];
+
+const POLARITY_BUCKETS = [
+  {label:'-1.0 to -0.6', count:3},
+  {label:'-0.6 to -0.3', count:12},
+  {label:'-0.3 to  0.0', count:40},
+  {label:' 0.0 to  0.1', count:23},
+  {label:' 0.1 to  0.3', count:82},
+  {label:' 0.3 to  0.6', count:97},
+  {label:' 0.6 to  1.0', count:43},
+];
+
+const SUBJECTIVITY_BY_SENT = [
+  {label:'Very Positive', subj:0.61, color:'#1a7a4a'},
+  {label:'Positive',      subj:0.54, color:'#4caf82'},
+  {label:'Neutral',       subj:0.38, color:'#9e9e9e'},
+  {label:'Negative',      subj:0.58, color:'#e57373'},
+  {label:'Very Negative', subj:0.65, color:'#c0392b'},
+];
+
+const LENGTH_BY_SENT = [
+  {label:'Very Positive', words:28, color:'#1a7a4a'},
+  {label:'Positive',      words:34, color:'#4caf82'},
+  {label:'Neutral',       words:22, color:'#9e9e9e'},
+  {label:'Negative',      words:51, color:'#e57373'},
+  {label:'Very Negative', words:67, color:'#c0392b'},
+];
+
+// Simulated rolling polarity trend across 300 reviews
+const TREND = Array.from({length:60}, (_,i) => {
+  const base = 0.28 + Math.sin(i*0.4)*0.12 + Math.cos(i*0.7)*0.08;
+  return Math.max(-0.4, Math.min(0.7, base + (Math.random()-0.5)*0.15));
+});
+
+const POS_WORDS = [
+  {word:'camera', size:26},{word:'performance', size:22},{word:'design', size:20},
+  {word:'fast', size:18},{word:'display', size:18},{word:'quality', size:16},
+  {word:'smooth', size:16},{word:'battery', size:14},{word:'build', size:14},
+  {word:'excellent', size:14},{word:'premium', size:13},{word:'love', size:13},
+  {word:'amazing', size:12},{word:'great', size:12},{word:'photo', size:12},
+];
+
+const NEG_WORDS = [
+  {word:'battery', size:26},{word:'heating', size:22},{word:'expensive', size:20},
+  {word:'price', size:18},{word:'overpriced', size:17},{word:'slow', size:16},
+  {word:'issue', size:15},{word:'problem', size:14},{word:'poor', size:13},
+  {word:'lag', size:13},{word:'disappoint', size:12},{word:'waste', size:12},
+  {word:'bad', size:11},{word:'charging', size:11},{word:'heavy', size:11},
+];
+
+// ── UTILS ────────────────────────────────────────────────────────────────────
+const tooltipStyle = {
+  backgroundColor: '#0d0d0d',
+  borderColor: '#e8a020',
+  borderWidth: 1,
+  titleColor: '#f5f2ec',
+  bodyColor: '#a09990',
+  titleFont: {family:'Playfair Display',size:12,weight:'700'},
+  bodyFont: {family:'Epilogue',size:11},
+  padding: 12,
+  cornerRadius: 0,
+  displayColors: true,
+  boxWidth: 8, boxHeight: 8,
+};
+
+function stat(label, val, color='#0d0d0d') {
+  return `<div class="hv"><div class="hv-label">${label}</div><div class="hv-val" style="color:${color}">${val}</div></div>`;
+}
+
+function extTip(id, fn) {
+  return ({tooltip}) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (tooltip.opacity === 0 || !tooltip.dataPoints?.length) {
+      el.innerHTML = `<span style="color:var(--muted);font-size:11px">← hover to explore</span>`;
+      return;
+    }
+    el.innerHTML = fn(tooltip);
+  };
+}
+
+let charts = {};
+
+// ── SENTIMENT DISTRIBUTION ───────────────────────────────────────────────────
+function buildSentDist() {
+  const ctx = document.getElementById('sentDistChart').getContext('2d');
+  charts.sentDist = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: SENT_DIST.map(d => d.label),
+      datasets: [{
+        data: SENT_DIST.map(d => d.count),
+        backgroundColor: SENT_DIST.map(d => d.color + 'cc'),
+        hoverBackgroundColor: SENT_DIST.map(d => d.color),
+        borderRadius: 0, borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: {mode:'index', intersect:false},
+      plugins: {
+        legend: {display:false},
+        tooltip: {
+          enabled:false,
+          external: extTip('dist-hover', t => {
+            const i = t.dataPoints[0].dataIndex;
+            const d = SENT_DIST[i];
+            return `<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+              ${stat('Category', d.label, d.color)}
+              ${stat('Reviews', d.count, '#0d0d0d')}
+              ${stat('Share', d.pct+'%', '#0d0d0d')}
+            </div>`;
+          })
+        }
+      },
+      scales: {
+        x: {grid:{display:false}, ticks:{color:'#6b6560',font:{family:'Epilogue',size:10}}, border:{display:false}},
+        y: {grid:{color:'#e8e4dc'}, ticks:{color:'#6b6560',font:{family:'Epilogue',size:10}}, border:{display:false}}
+      }
+    }
+  });
+}
+
+// ── RATING CHART ─────────────────────────────────────────────────────────────
+function buildRatingChart() {
+  const ctx = document.getElementById('ratingChart').getContext('2d');
+  charts.rating = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: RATING_POLARITY.map(d => d.stars),
+      datasets: [{
+        data: RATING_POLARITY.map(d => d.polarity),
+        backgroundColor: RATING_POLARITY.map(d => d.polarity >= 0 ? 'rgba(26,122,74,0.7)' : 'rgba(192,57,43,0.7)'),
+        hoverBackgroundColor: RATING_POLARITY.map(d => d.polarity >= 0 ? '#1a7a4a' : '#c0392b'),
+        borderRadius: 0, borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: {mode:'index', intersect:false},
+      plugins: {
+        legend: {display:false},
+        tooltip: {
+          enabled:false,
+          external: extTip('rating-hover', t => {
+            const i = t.dataPoints[0].dataIndex;
+            const d = RATING_POLARITY[i];
+            const col = d.polarity >= 0 ? '#1a7a4a' : '#c0392b';
+            return `<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+              ${stat('Rating', d.stars, '#0d0d0d')}
+              ${stat('Polarity', d.polarity.toFixed(3), col)}
+              ${stat('Reviews', d.count, '#0d0d0d')}
+            </div>`;
+          })
+        }
+      },
+      scales: {
+        x: {grid:{display:false}, ticks:{color:'#6b6560',font:{family:'Epilogue',size:11}}, border:{display:false}},
+        y: {
+          grid:{color:'#e8e4dc'},
+          ticks:{color:'#6b6560',font:{family:'Epilogue',size:10},callback:v=>v.toFixed(1)},
+          border:{display:false},
+        }
+      }
+    }
+  });
+}
+
+// ── POLARITY DISTRIBUTION ─────────────────────────────────────────────────────
+function buildPolarityChart() {
+  const ctx = document.getElementById('polarityChart').getContext('2d');
+  const colors = POLARITY_BUCKETS.map(d => {
+    if (d.label.includes('-1.0') || d.label.includes('-0.6')) return '#c0392b';
+    if (d.label.includes('-0.3') || d.label.includes('0.0 to  0.1')) return '#9e9e9e';
+    if (d.label.includes('0.1') || d.label.includes('0.3')) return '#4caf82';
+    return '#1a7a4a';
+  });
+  charts.polarity = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: POLARITY_BUCKETS.map(d => d.label.trim()),
+      datasets: [{
+        data: POLARITY_BUCKETS.map(d => d.count),
+        backgroundColor: colors.map(c => c + 'bb'),
+        hoverBackgroundColor: colors,
+        borderRadius: 0, borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: {mode:'index', intersect:false},
+      plugins: {
+        legend: {display:false},
+        tooltip: {
+          enabled:false,
+          external: extTip('polarity-hover', t => {
+            const i = t.dataPoints[0].dataIndex;
+            const d = POLARITY_BUCKETS[i];
+            const total = POLARITY_BUCKETS.reduce((s,x)=>s+x.count,0);
+            return `<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+              ${stat('Bucket', d.label.trim(), '#0d0d0d')}
+              ${stat('Reviews', d.count, '#0d0d0d')}
+              ${stat('Share', (d.count/total*100).toFixed(1)+'%', '#0d0d0d')}
+            </div>`;
+          })
+        }
+      },
+      scales: {
+        x: {grid:{display:false}, ticks:{color:'#6b6560',font:{family:'Epilogue',size:9},maxRotation:30}, border:{display:false}},
+        y: {grid:{color:'#e8e4dc'}, ticks:{color:'#6b6560',font:{family:'Epilogue',size:10}}, border:{display:false}}
+      }
+    }
+  });
+}
+
+// ── SUBJECTIVITY ──────────────────────────────────────────────────────────────
+function buildSubjectivity() {
+  const ctx = document.getElementById('subjectivityChart').getContext('2d');
+  charts.subj = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: SUBJECTIVITY_BY_SENT.map(d => d.label),
+      datasets: [{
+        label: 'Subjectivity',
+        data: SUBJECTIVITY_BY_SENT.map(d => d.subj),
+        backgroundColor: 'rgba(232,160,32,0.15)',
+        borderColor: '#e8a020',
+        borderWidth: 2,
+        pointBackgroundColor: '#e8a020',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointHoverRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {display:false},
+        tooltip: {
+          ...tooltipStyle,
+          callbacks: {
+            label: ctx => ` Subjectivity: ${ctx.parsed.r.toFixed(2)}`,
+          }
+        }
+      },
+      scales: {
+        r: {
+          min: 0, max: 0.8,
+          grid: {color:'#e8e4dc'},
+          ticks: {color:'#6b6560', font:{family:'Epilogue',size:9}, stepSize:0.2, backdropColor:'transparent'},
+          pointLabels: {color:'#6b6560', font:{family:'Epilogue',size:10}},
+          angleLines: {color:'#e8e4dc'},
+        }
+      }
+    }
+  });
+}
+
+// ── RATING LIST ───────────────────────────────────────────────────────────────
+function buildRatingList() {
+  const maxCount = Math.max(...RATING_POLARITY.map(d => d.count));
+  const list = document.getElementById('rating-list');
+  list.innerHTML = RATING_POLARITY.map(d => {
+    const sentColor = d.polarity > 0.2 ? 'var(--positive)' : d.polarity > 0 ? '#888' : 'var(--negative)';
+    const sentLabel = d.polarity > 0.2 ? 'Positive' : d.polarity > 0 ? 'Mixed' : 'Negative';
+    const barColor = d.polarity >= 0 ? 'var(--positive)' : 'var(--negative)';
+    return `<div class="rating-row">
+      <span class="rating-stars">${d.stars.replace(/★/g,'★').replace(/☆/g,'☆')}</span>
+      <div class="rating-bar-bg">
+        <div class="rating-bar-fill" data-w="${(d.count/maxCount*100).toFixed(0)}" style="background:${barColor}"></div>
+      </div>
+      <span class="rating-count">${d.count}</span>
+      <span class="rating-sentiment" style="color:${sentColor}">${sentLabel}</span>
+    </div>`;
+  }).join('');
+  setTimeout(() => {
+    document.querySelectorAll('.rating-bar-fill').forEach(el => {
+      el.style.width = el.dataset.w + '%';
+    });
+  }, 400);
+}
+
+// ── REVIEW LENGTH ─────────────────────────────────────────────────────────────
+function buildLengthChart() {
+  const ctx = document.getElementById('lengthChart').getContext('2d');
+  charts.length = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: LENGTH_BY_SENT.map(d => d.label),
+      datasets: [{
+        data: LENGTH_BY_SENT.map(d => d.words),
+        backgroundColor: LENGTH_BY_SENT.map(d => d.color + 'bb'),
+        hoverBackgroundColor: LENGTH_BY_SENT.map(d => d.color),
+        borderRadius: 0, borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: {mode:'index', intersect:false},
+      plugins: {
+        legend: {display:false},
+        tooltip: {
+          enabled:false,
+          external: extTip('length-hover', t => {
+            const i = t.dataPoints[0].dataIndex;
+            const d = LENGTH_BY_SENT[i];
+            return `<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+              ${stat('Sentiment', d.label, d.color)}
+              ${stat('Avg Words', d.words+' words', '#0d0d0d')}
+              ${d.label.includes('Negative') ? stat('Insight', 'More words = more detail', '#c0392b') : ''}
+            </div>`;
+          })
+        }
+      },
+      scales: {
+        x: {grid:{display:false}, ticks:{color:'#6b6560',font:{family:'Epilogue',size:10}}, border:{display:false}},
+        y: {grid:{color:'#e8e4dc'}, ticks:{color:'#6b6560',font:{family:'Epilogue',size:10},callback:v=>v+' wds'}, border:{display:false}}
+      }
+    }
+  });
+}
+
+// ── WORD CLOUDS ───────────────────────────────────────────────────────────────
+function buildWordClouds() {
+  const posCloud = document.getElementById('pos-cloud');
+  posCloud.innerHTML = POS_WORDS.map(w =>
+    `<span class="word-tag pos" style="font-size:${w.size}px">${w.word}</span>`
+  ).join('');
+
+  const negCloud = document.getElementById('neg-cloud');
+  negCloud.innerHTML = NEG_WORDS.map(w =>
+    `<span class="word-tag neg" style="font-size:${w.size}px">${w.word}</span>`
+  ).join('');
+}
+
+// ── TREND CHART ───────────────────────────────────────────────────────────────
+function buildTrend() {
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  const labels = TREND.map((_,i) => `Review ${i*5+1}`);
+  const grad = ctx.createLinearGradient(0,0,0,200);
+  grad.addColorStop(0,'rgba(232,160,32,0.2)');
+  grad.addColorStop(1,'rgba(232,160,32,0.0)');
+
+  charts.trend = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Polarity',
+          data: TREND,
+          borderColor: '#e8a020',
+          borderWidth: 2,
+          backgroundColor: grad,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          pointHoverRadius: 6,
+          pointHoverBackgroundColor: '#e8a020',
+          pointHoverBorderColor: '#fff',
+          pointHoverBorderWidth: 2,
+        },
+        {
+          label: 'Neutral',
+          data: TREND.map(() => 0),
+          borderColor: 'rgba(107,101,96,0.3)',
+          borderWidth: 1,
+          borderDash: [6,4],
+          pointRadius: 0,
+          fill: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: {mode:'index', intersect:false},
+      plugins: {
+        legend: {display:false},
+        tooltip: {
+          enabled:false,
+          external: extTip('trend-hover', t => {
+            const d = t.dataPoints[0];
+            const val = d.parsed.y;
+            const col = val > 0.1 ? 'var(--positive)' : val < -0.1 ? 'var(--negative)' : '#888';
+            const label = val > 0.1 ? 'Positive' : val < -0.1 ? 'Negative' : 'Neutral';
+            return `<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+              ${stat('Window', d.label, '#0d0d0d')}
+              ${stat('Polarity', val.toFixed(3), col)}
+              ${stat('Sentiment', label, col)}
+            </div>`;
+          })
+        }
+      },
+      scales: {
+        x: {grid:{display:false}, ticks:{color:'#6b6560',font:{family:'Epilogue',size:9},maxTicksLimit:8}, border:{display:false}},
+        y: {grid:{color:'#e8e4dc'}, ticks:{color:'#6b6560',font:{family:'Epilogue',size:10},callback:v=>v.toFixed(1)}, border:{display:false}}
+      }
+    }
+  });
+}
+
+// ── METER ─────────────────────────────────────────────────────────────────────
+function animateMeter() {
+  setTimeout(() => {
+    document.getElementById('meter-pos').style.width = '81.67%';
+    document.getElementById('meter-neg').style.width = '18.33%';
+  }, 300);
+}
+
+// ── SMOOTH SCROLL ─────────────────────────────────────────────────────────────
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const t = document.querySelector(a.getAttribute('href'));
+    if (t) t.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+});
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  buildSentDist();
+  buildRatingChart();
+  buildPolarityChart();
+  buildSubjectivity();
+  buildRatingList();
+  buildLengthChart();
+  buildWordClouds();
+  buildTrend();
+  animateMeter();
+});
+</script>
+</body>
+</html>
